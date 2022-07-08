@@ -1,0 +1,23 @@
+# To learn more about the skaffold.yaml schema visit
+# https://skaffold.dev/docs/references/yaml/
+apiVersion: skaffold/v2beta19
+kind: Config
+build:
+  tagPolicy:
+    sha256: {}
+  artifacts:
+  - image: splunk-operator
+    context: .
+    docker:
+      dockerfile: .devcontainer/Dockerfile
+      #dockerfile: Dockerfile
+      #target: manager
+deploy:
+  kustomize:
+    defaultNamespace: splunk-operator
+    paths:
+    - config/default
+profiles:
+- name: cloudbuild
+  build:
+    googleCloudBuild: {}

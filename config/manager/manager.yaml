@@ -37,12 +37,10 @@ spec:
       hostPID: false
       hostIPC: false
       containers:
-      - command:
-        - /manager
+      - image: controller:latest
         args:
         - --leader-elect
         - --pprof
-        image: controller:latest
         imagePullPolicy: Always
         name: manager
         env:
