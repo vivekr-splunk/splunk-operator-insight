@@ -33,3 +33,25 @@ func (f splunkGateway) GetClusterConfig() error {
 	}
 	return nil
 }
+
+func (f splunkGateway) GetIndexVolumes() error {
+	url := "/data/index-volumes"
+	resp, err := f.client.R().Get(url)
+	if resp.StatusCode() == http.StatusOK {
+		f.log.Info("response success set to", "result", resp.Result())
+	} else {
+		f.log.Info("response failure set to", "result", err)
+	}
+	return nil
+}
+
+func (f splunkGateway) GetDeploymentHealth() error {
+	url := "/server/health/deployment"
+	resp, err := f.client.R().Get(url)
+	if resp.StatusCode() == http.StatusOK {
+		f.log.Info("response success set to", "result", resp.Result())
+	} else {
+		f.log.Info("response failure set to", "result", err)
+	}
+	return nil
+}
