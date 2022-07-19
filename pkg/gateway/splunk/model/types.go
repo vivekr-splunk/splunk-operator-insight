@@ -1,6 +1,9 @@
-package gateway
+package model
 
-import "context"
+import (
+	"github.com/go-logr/logr"
+	"github.com/go-resty/resty/v2"
+)
 
 // SplunkCredentials contains the information necessary to communicate with
 // the Splunk service
@@ -39,17 +42,10 @@ type SplunkCredentials struct {
 	DisableCertificateVerification bool `json:"disableCertificateVerification,omitempty"`
 }
 
-// EventPublisher is a function type for publishing events associated
-// with provisioning.
-type EventPublisher func(reason, message string)
-
-// Factory is the interface for creating new Gateway objects.
-type Factory interface {
-	NewGateway(ctx context.Context, sad *SplunkCredentials, publisher EventPublisher) (Gateway, error)
-}
-
-// Gateway holds the state information for talking to
-// splunk gateway backend.
-type Gateway interface {
-	GetClusterConfig() error
+type splunkGatewayFactory struct {
+	log logr.Logger
+	//credentials to log on to splunk
+	credentials *SplunkCredentials
+	// client for talking to splunk
+	client *resty.Client
 }

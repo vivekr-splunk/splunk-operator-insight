@@ -1,11 +1,12 @@
-package splunk
+package impl
 
 import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/go-resty/resty/v2"
-	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/cluster-manager"
+	//model "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
+	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/indexer"
 	//cmmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/cluster-manager/model"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
@@ -19,18 +20,19 @@ type splunkGatewayFactory struct {
 	client *resty.Client
 }
 
-func NewGatewayFactory(ctx context.Context, sad *gateway.SplunkCredentials) gateway.Factory {
+// NewGatewayFactory  new gateway factory to create gateway interface
+func NewGatewayFactory(ctx context.Context, sad *gateway.SplunkCredentials, publisher gateway.EventPublisher) gateway.Factory {
 	factory := splunkGatewayFactory{}
 	factory.log = log.FromContext(ctx).WithName("gateway").WithName("splunk")
-	err := factory.init(ctx, sad)
+	err := factory.init(ctx, sad, publisher)
 	if err != nil {
-		factory.log.Error(err, "Cannot splunk gateway endpoint")
+		factory.log.Error(err, "Cannot connect to splunk gateway endpoint")
 		return nil // FIXME we have to throw some kind of exception or error here
 	}
 	return factory
 }
 
-func (f *splunkGatewayFactory) init(ctx context.Context, sad *gateway.SplunkCredentials) error {
+func (f *splunkGatewayFactory) init(ctx context.Context, sad *gateway.SplunkCredentials, publisher gateway.EventPublisher) error {
 	f.log.Info("splunk settings",
 		"endpoint", f.credentials.Address,
 		"CACertFile", f.credentials.TrustedCAFile,
@@ -41,7 +43,7 @@ func (f *splunkGatewayFactory) init(ctx context.Context, sad *gateway.SplunkCred
 
 	client := resty.New()
 	//splunkURL := fmt.Sprintf("https://%s:%d/%s", sad.Address, sad.Port, sad.ServicesNamespace)
-	splunkURL := fmt.Sprintf("https://%s:%d/services", sad.Address, sad.Port)
+	splunkURL := fmt.Sprintf("https://%s:%d", sad.Address, sad.Port)
 	client.SetBaseURL(splunkURL)
 	client.SetHeader("Content-Type", "application/json")
 	client.SetHeader("Accept", "application/json")
@@ -64,7 +66,7 @@ func (f splunkGatewayFactory) splunkGateway(ctx context.Context, sad *gateway.Sp
 	return newGateway, nil
 }
 
-// NewGateway returns a new Splunk Gateway using the global
+// NewGateway returns a new Splunk Gateway using global
 // configuration for finding the Splunk services.
 func (f splunkGatewayFactory) NewGateway(ctx context.Context, sad *gateway.SplunkCredentials, publisher gateway.EventPublisher) (gateway.Gateway, error) {
 	return f.splunkGateway(ctx, sad, publisher)
