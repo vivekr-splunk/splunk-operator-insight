@@ -64,6 +64,9 @@ type ClusterMasterStatus struct {
 
 	// App Framework status
 	AppContext AppDeploymentContext `json:"appContext"`
+
+	// Conditions represent the latest available observations of an object's state
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 // BundlePushInfo Indicates if bundle push required

@@ -1,4 +1,4 @@
-package fixutre
+package fixture
 
 import (
 	"context"
@@ -9,12 +9,13 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-resty/resty/v2"
 	"github.com/jarcoal/httpmock"
-	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/indexer"
-	model "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
+	splunkmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
 	clustermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster"
 	managermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/manager"
 	peermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/peer"
 	commonmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/common"
+	lmmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/license-manager"
+	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/services"
 	logz "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -26,7 +27,7 @@ type fixtureGateway struct {
 	// client for talking to splunk
 	client *resty.Client
 	// the splunk credentials
-	credentials gateway.SplunkCredentials
+	credentials splunkmodel.SplunkCredentials
 	// a logger configured for this host
 	log logr.Logger
 	// an event publisher for recording significant events
@@ -40,7 +41,7 @@ type Fixture struct {
 }
 
 // NewGateway returns a new Fixture Gateway
-func (f *Fixture) NewGateway(ctx context.Context, sad *gateway.SplunkCredentials, publisher gateway.EventPublisher) (gateway.Gateway, error) {
+func (f *Fixture) NewGateway(ctx context.Context, sad *splunkmodel.SplunkCredentials, publisher gateway.EventPublisher) (gateway.Gateway, error) {
 	p := &fixtureGateway{
 		log:       log.WithValues("splunk", sad.Address),
 		publisher: publisher,
@@ -50,9 +51,9 @@ func (f *Fixture) NewGateway(ctx context.Context, sad *gateway.SplunkCredentials
 	return p, nil
 }
 
-// Access cluster node configuration details.
+// GetClusterConfig Access cluster node configuration details.
 // endpoint: https://<host>:<mPort>/services/cluster/config
-func (p *fixtureGateway) GetClusterConfig(context context.Context) (*[]clustermodel.ClusterConfigContent, error) {
+func (p *fixtureGateway) GetClusterConfig(ctx context.Context) (*[]clustermodel.ClusterConfigContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_manager_buckets.json")
@@ -76,9 +77,9 @@ func (p *fixtureGateway) GetClusterConfig(context context.Context) (*[]clustermo
 	return &contentList, nil
 }
 
-// Provides bucket configuration information for a cluster manager node.
+// GetClusterManagerBuckets Provides bucket configuration information for a cluster manager node.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/buckets
-func (p *fixtureGateway) GetClusterManagerBuckets(context context.Context) (*[]managermodel.ClusterManagerBucketContent, error) {
+func (p *fixtureGateway) GetClusterManagerBuckets(ctx context.Context) (*[]managermodel.ClusterManagerBucketContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -92,12 +93,13 @@ func (p *fixtureGateway) GetClusterManagerBuckets(context context.Context) (*[]m
 	fakeUrl := clustermodel.GetClusterManagerBucketUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerBucketHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -106,7 +108,9 @@ func (p *fixtureGateway) GetClusterManagerBuckets(context context.Context) (*[]m
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -117,10 +121,10 @@ func (p *fixtureGateway) GetClusterManagerBuckets(context context.Context) (*[]m
 	return &contentList, nil
 }
 
-// Access current generation cluster manager information and create a cluster generation.
+// GetClusterManagerGeneration Access current generation cluster manager information and create a cluster generation.
 // List peer nodes participating in the current generation for this manager.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/generation
-func (p *fixtureGateway) GetClusterManagerGeneration(context context.Context) (*[]managermodel.ClusterManagerGenerationContent, error) {
+func (p *fixtureGateway) GetClusterManagerGeneration(ctx context.Context) (*[]managermodel.ClusterManagerGenerationContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -134,12 +138,13 @@ func (p *fixtureGateway) GetClusterManagerGeneration(context context.Context) (*
 	fakeUrl := clustermodel.GetClusterManagerGenerationUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerGenerationHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -148,7 +153,9 @@ func (p *fixtureGateway) GetClusterManagerGeneration(context context.Context) (*
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -159,21 +166,21 @@ func (p *fixtureGateway) GetClusterManagerGeneration(context context.Context) (*
 	return &contentList, nil
 }
 
-// Used by the load balancers to check the high availability mode of a given cluster manager.
+// GetClusterManagerHAActiveStatus Used by the load balancers to check the high availability mode of a given cluster manager.
 // The active cluster manager will return "HTTP 200", denoting "healthy", and a startup or standby cluster manager will return "HTTP 503".
 // Authentication and authorization:
 // 	This endpoint is unauthenticated because some load balancers don't support authentication on a health check endpoint.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/ha_active_status
 // FIXME TODO, not sure how the structure looks
-func (p *fixtureGateway) GetClusterManagerHAActiveStatus(context context.Context) error {
+func (p *fixtureGateway) GetClusterManagerHAActiveStatus(ctx context.Context) error {
 	return nil
 }
 
-// Performs health checks to determine the cluster health and search impact, prior to a rolling upgrade of the indexer cluster.
+// GetClusterManagerHealth Performs health checks to determine the cluster health and search impact, prior to a rolling upgrade of the indexer cluster.
 // Authentication and Authorization:
 // 		Requires the admin role or list_indexer_cluster capability.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/health
-func (p *fixtureGateway) GetClusterManagerHealth(context context.Context) (*[]managermodel.ClusterManagerHealthContent, error) {
+func (p *fixtureGateway) GetClusterManagerHealth(ctx context.Context) (*[]managermodel.ClusterManagerHealthContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -188,12 +195,13 @@ func (p *fixtureGateway) GetClusterManagerHealth(context context.Context) (*[]ma
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerHealthHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -202,7 +210,9 @@ func (p *fixtureGateway) GetClusterManagerHealth(context context.Context) (*[]ma
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -213,9 +223,9 @@ func (p *fixtureGateway) GetClusterManagerHealth(context context.Context) (*[]ma
 	return &contentList, nil
 }
 
-// Access cluster index information.
+// GetClusterManagerIndexes Access cluster index information.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/indexes
-func (p *fixtureGateway) GetClusterManagerIndexes(context context.Context) (*[]managermodel.ClusterManagerIndexesContent, error) {
+func (p *fixtureGateway) GetClusterManagerIndexes(ctx context.Context) (*[]managermodel.ClusterManagerIndexesContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -229,12 +239,13 @@ func (p *fixtureGateway) GetClusterManagerIndexes(context context.Context) (*[]m
 	fakeUrl := clustermodel.GetClusterManagerIndexesUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerIndexesHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -243,7 +254,9 @@ func (p *fixtureGateway) GetClusterManagerIndexes(context context.Context) (*[]m
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -254,10 +267,10 @@ func (p *fixtureGateway) GetClusterManagerIndexes(context context.Context) (*[]m
 	return &contentList, nil
 }
 
-// Access information about cluster manager node.
+// GetClusterManagerInfo Access information about cluster manager node.
 // get List cluster manager node details.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/info
-func (p *fixtureGateway) GetClusterManagerInfo(context context.Context) (*[]managermodel.ClusterManagerInfoContent, error) {
+func (p *fixtureGateway) GetClusterManagerInfo(ctx context.Context) (*[]managermodel.ClusterManagerInfoContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -271,12 +284,13 @@ func (p *fixtureGateway) GetClusterManagerInfo(context context.Context) (*[]mana
 	fakeUrl := clustermodel.GetClusterManagerInfoUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerInfoHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -285,7 +299,9 @@ func (p *fixtureGateway) GetClusterManagerInfo(context context.Context) (*[]mana
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -296,9 +312,9 @@ func (p *fixtureGateway) GetClusterManagerInfo(context context.Context) (*[]mana
 	return &contentList, nil
 }
 
-// Access cluster manager peers.
+// GetClusterManagerPeersAccess cluster manager peers.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/peers
-func (p *fixtureGateway) GetClusterManagerPeers(context context.Context) (*[]managermodel.ClusterManagerPeerContent, error) {
+func (p *fixtureGateway) GetClusterManagerPeers(ctx context.Context) (*[]managermodel.ClusterManagerPeerContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -312,12 +328,13 @@ func (p *fixtureGateway) GetClusterManagerPeers(context context.Context) (*[]man
 	fakeUrl := clustermodel.GetClusterManagerPeersUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerPeerHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -326,7 +343,9 @@ func (p *fixtureGateway) GetClusterManagerPeers(context context.Context) (*[]man
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -337,12 +356,12 @@ func (p *fixtureGateway) GetClusterManagerPeers(context context.Context) (*[]man
 	return &contentList, nil
 }
 
-// Display the details of all cluster managers participating in cluster manager redundancy, and switch the HA state of the cluster managers.
+// GetClusterManagerRedundancy Display the details of all cluster managers participating in cluster manager redundancy, and switch the HA state of the cluster managers.
 // Authentication and authorization
 //		The GET on this endpoint needs the capability list_indexer_cluster, and the POST on this endpoint needs the capability edit_indexer_cluster.
 // GET Display the details of all cluster managers participating in cluster manager redundancy
 // endpoint: https://<host>:<mPort>/services/cluster/manager/redundancy
-func (p *fixtureGateway) GetClusterManagerRedundancy(context context.Context) (*[]managermodel.ClusterManagerRedundancyContent, error) {
+func (p *fixtureGateway) GetClusterManagerRedundancy(ctx context.Context) (*[]managermodel.ClusterManagerRedundancyContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -356,12 +375,13 @@ func (p *fixtureGateway) GetClusterManagerRedundancy(context context.Context) (*
 	fakeUrl := clustermodel.GetClusterManagerRedundancyUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerRedundancyHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -370,7 +390,9 @@ func (p *fixtureGateway) GetClusterManagerRedundancy(context context.Context) (*
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -381,10 +403,10 @@ func (p *fixtureGateway) GetClusterManagerRedundancy(context context.Context) (*
 	return &contentList, nil
 }
 
-// Access cluster site information.
+// GetClusterManagerSites Access cluster site information.
 // list List available cluster sites.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/sites
-func (p *fixtureGateway) GetClusterManagerSites(context context.Context) (*[]managermodel.ClusterManagerSiteContent, error) {
+func (p *fixtureGateway) GetClusterManagerSites(ctx context.Context) (*[]managermodel.ClusterManagerSiteContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -398,12 +420,13 @@ func (p *fixtureGateway) GetClusterManagerSites(context context.Context) (*[]man
 	fakeUrl := clustermodel.GetClusterManagerSitesUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerSiteHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -412,7 +435,9 @@ func (p *fixtureGateway) GetClusterManagerSites(context context.Context) (*[]man
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -423,53 +448,55 @@ func (p *fixtureGateway) GetClusterManagerSites(context context.Context) (*[]man
 	return &contentList, nil
 }
 
-// Endpoint to get the status of a rolling restart.
-// GET the status of a rolling restart.
-// endpoint: https://<host>:<mPort>/services/cluster/manager/status
-func (p *fixtureGateway) GetClusterManagerStatus(context context.Context) (*[]managermodel.ClusterManagerStatusContent, error) {
+// GetClusterManagerSearchHeadStatus Endpoint to get searchheads connected to cluster manager.
+// endpoint: https://<host>:<mPort>/services/cluster/manager/searchheads
+func (p *fixtureGateway) GetClusterManagerSearchHeadStatus(ctx context.Context) (*[]managermodel.SearchHeadContent, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
-	content, err := ioutil.ReadFile("cluster_config.json")
+	content, err := ioutil.ReadFile("cluster_manager_searchhead.json")
 	if err != nil {
-		log.Error(err, "fixture: error in get cluster config")
+		log.Error(err, "fixture: error in get cluster manager search heads")
 		return nil, err
 	}
 	httpmock.ActivateNonDefault(p.client.GetClient())
 	fixtureData := string(content)
 	responder := httpmock.NewStringResponder(200, fixtureData)
-	fakeUrl := clustermodel.GetClusterManagerStatusUrl
+	fakeUrl := clustermodel.GetClusterManagerSearchHeadUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
-	envelop := &managermodel.ClusterManagerStatusHeader{}
+	splunkError := &splunkmodel.SplunkError{}
+	envelop := &managermodel.ClusterMasterSearchHeadHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager connected to search head status failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
-	contentList := []managermodel.ClusterManagerStatusContent{}
+	contentList := []managermodel.SearchHeadContent{}
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
 	return &contentList, nil
 }
 
-// Access cluster peers bucket configuration.
+// GetClusterPeerBuckets Access cluster peers bucket configuration.
 // GET
 // List cluster peers bucket configuration.
 // endpoint: https://<host>:<mPort>/services/cluster/peer/buckets
-func (p *fixtureGateway) GetClusterPeerBuckets(context context.Context) (*[]peermodel.ClusterPeerBucket, error) {
+func (p *fixtureGateway) GetClusterPeerBuckets(ctx context.Context) (*[]peermodel.ClusterPeerBucket, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -483,12 +510,13 @@ func (p *fixtureGateway) GetClusterPeerBuckets(context context.Context) (*[]peer
 	fakeUrl := clustermodel.GetClusterPeerBucketsUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &commonmodel.Header{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -497,7 +525,9 @@ func (p *fixtureGateway) GetClusterPeerBuckets(context context.Context) (*[]peer
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -508,11 +538,11 @@ func (p *fixtureGateway) GetClusterPeerBuckets(context context.Context) (*[]peer
 	return &contentList, nil
 }
 
-// Manage peer buckets.
+// GetClusterPeerInfoManage peer buckets.
 // GET
 // List peer specified bucket information.
 // endpoint: https://<host>:<mPort>/services/cluster/peer/buckets/{name}
-func (p *fixtureGateway) GetClusterPeerInfo(context context.Context) (*[]peermodel.ClusterPeerInfo, error) {
+func (p *fixtureGateway) GetClusterPeerInfo(ctx context.Context) (*[]peermodel.ClusterPeerInfo, error) {
 	// Read entire file content, giving us little control but
 	// making it very simple. No need to close the file.
 	content, err := ioutil.ReadFile("cluster_config.json")
@@ -526,12 +556,13 @@ func (p *fixtureGateway) GetClusterPeerInfo(context context.Context) (*[]peermod
 	fakeUrl := clustermodel.GetClusterPeerInfoUrl
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &commonmodel.Header{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(fakeUrl)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -540,7 +571,9 @@ func (p *fixtureGateway) GetClusterPeerInfo(context context.Context) (*[]peermod
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -549,4 +582,44 @@ func (p *fixtureGateway) GetClusterPeerInfo(context context.Context) (*[]peermod
 		contentList = append(contentList, entry.Content.(peermodel.ClusterPeerInfo))
 	}
 	return &contentList, nil
+}
+
+// GetLicenseManagerPeers Access cluster node configuration details.
+// endpoint: "https://localhost:8089/services/licenser/localpeer?output_mode=json"
+func (p *fixtureGateway) GetLicenseManagerPeers(context context.Context) (*[]lmmodel.LicenseLocalPeerEntry, error) {
+	// Read entire file content, giving us little control but
+	// making it very simple. No need to close the file.
+	content, err := ioutil.ReadFile("cluster_manager_license_manager_peers.json")
+	if err != nil {
+		log.Error(err, "fixture: error in get cluster config")
+		return nil, err
+	}
+	httpmock.ActivateNonDefault(p.client.GetClient())
+	fixtureData := string(content)
+	responder := httpmock.NewStringResponder(200, fixtureData)
+	fakeUrl := clustermodel.GetLicenseManagerLocalPeers
+	httpmock.RegisterResponder("GET", fakeUrl, responder)
+	// featch the configheader into struct
+	splunkError := &splunkmodel.SplunkError{}
+	envelop := &lmmodel.LicenseLocalPeerHeader{}
+	resp, err := p.client.R().
+		SetResult(envelop).
+		SetError(&splunkError).
+		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
+		Get(fakeUrl)
+	if err != nil {
+		p.log.Error(err, "get license manager local peers failed")
+	}
+	if resp.StatusCode() != http.StatusOK {
+		p.log.Info("response failure set to", "result", err)
+	}
+	if resp.StatusCode() > 400 {
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
+		return nil, splunkError
+	}
+
+	return &envelop.Entry, err
 }

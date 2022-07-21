@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	enterpriseApi "github.com/splunk/splunk-operator/api/v3"
 	common "github.com/splunk/splunk-operator/controllers/common"
+	provisioner "github.com/splunk/splunk-operator/pkg/provisioner/splunk"
 	enterprise "github.com/splunk/splunk-operator/pkg/splunk/enterprise"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +42,8 @@ import (
 // ClusterMasterReconciler reconciles a ClusterMaster object
 type ClusterMasterReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme             *runtime.Scheme
+	ProvisionerFactory provisioner.Factory
 }
 
 //+kubebuilder:rbac:groups=enterprise.splunk.com,resources=clustermasters,verbs=get;list;watch;create;update;patch;delete
@@ -102,7 +104,7 @@ func (r *ClusterMasterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	reqLogger.Info("start", "CR version", instance.GetResourceVersion())
 
-	result, err := ApplyClusterManager(ctx, r.Client, instance)
+	result, err := ApplyClusterManager(ctx, r.Client, instance, r.ProvisionerFactory)
 	if result.Requeue && result.RequeueAfter != 0 {
 		reqLogger.Info("Requeued", "period(seconds)", int(result.RequeueAfter/time.Second))
 	}
@@ -111,8 +113,8 @@ func (r *ClusterMasterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // ApplyClusterManager adding to handle unit test case
-var ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster) (reconcile.Result, error) {
-	return enterprise.ApplyClusterManager(ctx, client, instance)
+var ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster, provisionerFactory provisioner.Factory) (reconcile.Result, error) {
+	return enterprise.ApplyClusterManager(ctx, client, instance, provisionerFactory)
 }
 
 // SetupWithManager sets up the controller with the Manager.

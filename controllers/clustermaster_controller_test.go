@@ -8,6 +8,7 @@ import (
 
 	enterpriseApi "github.com/splunk/splunk-operator/api/v3"
 	"github.com/splunk/splunk-operator/controllers/testutils"
+	provisioner "github.com/splunk/splunk-operator/pkg/provisioner/splunk"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -34,7 +35,7 @@ var _ = Describe("ClusterMaster Controller", func() {
 
 		It("Get ClusterMaster custom resource should failed", func() {
 			namespace := "ns-splunk-cm-1"
-			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster) (reconcile.Result, error) {
+			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster, provisionerFactory provisioner.Factory) (reconcile.Result, error) {
 				return reconcile.Result{}, nil
 			}
 			nsSpecs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
@@ -50,7 +51,7 @@ var _ = Describe("ClusterMaster Controller", func() {
 
 		It("Create ClusterMaster custom resource with annotations should pause", func() {
 			namespace := "ns-splunk-cm-2"
-			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster) (reconcile.Result, error) {
+			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster, provisionerFactory provisioner.Factory) (reconcile.Result, error) {
 				return reconcile.Result{}, nil
 			}
 			nsSpecs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
@@ -70,7 +71,7 @@ var _ = Describe("ClusterMaster Controller", func() {
 	Context("ClusterMaster Management", func() {
 		It("Create ClusterMaster custom resource should succeeded", func() {
 			namespace := "ns-splunk-cm-3"
-			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster) (reconcile.Result, error) {
+			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster, provisionerFactory provisioner.Factory) (reconcile.Result, error) {
 				return reconcile.Result{}, nil
 			}
 			nsSpecs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
@@ -83,7 +84,7 @@ var _ = Describe("ClusterMaster Controller", func() {
 
 		It("Cover Unused methods", func() {
 			namespace := "ns-splunk-cm-4"
-			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster) (reconcile.Result, error) {
+			ApplyClusterManager = func(ctx context.Context, client client.Client, instance *enterpriseApi.ClusterMaster, provisionerFactory provisioner.Factory) (reconcile.Result, error) {
 				return reconcile.Result{}, nil
 			}
 			nsSpecs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}

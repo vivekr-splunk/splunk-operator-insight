@@ -22,6 +22,8 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	provisioner "github.com/splunk/splunk-operator/pkg/provisioner/splunk"
+	splunkimpl "github.com/splunk/splunk-operator/pkg/provisioner/splunk/impl"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -64,6 +66,7 @@ func main() {
 	var pprofActive bool
 	var logEncoder string
 	var logLevel int
+	var runInTestMode bool
 
 	flag.StringVar(&logEncoder, "logEncoder", "json", "log encoding ('json' or 'console')")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -73,6 +76,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&pprofActive, "pprof", true, "Enable pprof endpoint")
 	flag.IntVar(&logLevel, "loglevel", int(zapcore.InfoLevel), "set log level")
+	flag.BoolVar(&runInTestMode, "test-mode", false, "disable splunk communication")
 
 	opts := zap.Options{
 		Development: true,
@@ -99,9 +103,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	var provisionerFactory provisioner.Factory
+	ctrl.Log.Info("using provisioner")
+	provisionerFactory = splunkimpl.NewProvisionerFactory(runInTestMode)
+
 	if err = (&controllers.ClusterMasterReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:             mgr.GetClient(),
+		Scheme:             mgr.GetScheme(),
+		ProvisionerFactory: provisionerFactory,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterMaster")
 		os.Exit(1)

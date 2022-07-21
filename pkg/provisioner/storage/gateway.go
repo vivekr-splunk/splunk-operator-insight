@@ -1,22 +1,16 @@
-package model
+package gateway
 
-import (
-	"github.com/go-logr/logr"
-	"github.com/go-resty/resty/v2"
-)
+import "context"
 
-// SplunkCredentials contains the information necessary to communicate with
+// Credentials contains the information necessary to communicate with
 // the Splunk service
-type SplunkCredentials struct {
+type Credentials struct {
 
 	// Address holds the URL for splunk service
 	Address string `json:"address"`
 
 	//Port port to connect
 	Port int32 `json:"port"`
-
-	//Namespace where the splunk services are created
-	Namespace string `json:"namespace,omitempty"`
 
 	//ServicesNamespace  optional for services endpoints
 	ServicesNamespace string `json:"servicesNs,omitempty"`
@@ -29,7 +23,6 @@ type SplunkCredentials struct {
 
 	//CredentialsName The name of the secret containing the Splunk credentials (requires
 	// keys "username" and "password").
-	// TODO FIXME need to change this to map as key value
 	CredentialsName string `json:"credentialsName"`
 
 	//TrustedCAFile Server trusted CA file
@@ -42,14 +35,21 @@ type SplunkCredentials struct {
 	ClientPrivateKeyFile string `json:"clientPrivateKeyFile,omitempty"`
 
 	// DisableCertificateVerification disables verification of splunk
-	// certificates when using HTTPS to connect to the Splunk.
+	// certificates when using HTTPS to connect to the .
 	DisableCertificateVerification bool `json:"disableCertificateVerification,omitempty"`
 }
 
-type splunkGatewayFactory struct {
-	log logr.Logger
-	//credentials to log on to splunk
-	credentials *SplunkCredentials
-	// client for talking to splunk
-	client *resty.Client
+// EventPublisher is a function type for publishing events associated
+// with provisioning.
+type EventPublisher func(reason, message string)
+
+// Factory is the interface for creating new Gateway objects.
+type Factory interface {
+	NewGateway(ctx context.Context, sad *Credentials, publisher EventPublisher) (Gateway, error)
+}
+
+// Gateway holds the state information for talking to
+// splunk gateway backend.
+type Gateway interface {
+	GetClusterConfig() error
 }

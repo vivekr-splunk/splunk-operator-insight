@@ -1,7 +1,7 @@
 package cluster
 
 const (
-	GetClusterConfigUrl = "services/cluster/config"
+	GetClusterConfigUrl = "/services/cluster/config"
 
 	GetClusterManagerBucketUrl = "/services/cluster/manager/buckets"
 
@@ -19,9 +19,11 @@ const (
 
 	GetClusterManagerSitesUrl = "/services/cluster/manager/sites"
 
-	GetClusterManagerStatusUrl = "/services/cluster/"
+	GetClusterManagerSearchHeadUrl = "/services/cluster/manager/searchheads"
 
 	GetClusterPeerBucketsUrl = "/services/cluster/peer/buckets"
 
 	GetClusterPeerInfoUrl = "/services/cluster/peer/info"
+
+	GetLicenseManagerLocalPeers = "/services/licenser/localslave"
 )

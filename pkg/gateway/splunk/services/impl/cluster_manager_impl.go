@@ -3,17 +3,13 @@ package impl
 import (
 	"context"
 	"net/http"
-	//"encoding/json"
+
 	"github.com/go-logr/logr"
 	"github.com/go-resty/resty/v2"
-
-	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/indexer"
-	model "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
+	splunkmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
 	clustermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster"
 	managermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/manager"
-	peermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/peer"
-	commonmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/common"
-	//logz "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/services"
 )
 
 // splunkGateway implements the gateway.Gateway interface
@@ -28,7 +24,7 @@ type splunkGateway struct {
 	// client for talking to splunk
 	client *resty.Client
 	// credentials
-	credentials *gateway.SplunkCredentials
+	credentials *splunkmodel.SplunkCredentials
 }
 
 // Access cluster node configuration details.
@@ -37,12 +33,13 @@ func (p *splunkGateway) GetClusterConfig(context context.Context) (*[]clustermod
 	url := clustermodel.GetClusterConfigUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &clustermodel.ClusterConfigHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
 		p.log.Error(err, "get cluster configuration failed")
@@ -51,7 +48,9 @@ func (p *splunkGateway) GetClusterConfig(context context.Context) (*[]clustermod
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -59,7 +58,7 @@ func (p *splunkGateway) GetClusterConfig(context context.Context) (*[]clustermod
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Provides bucket configuration information for a cluster manager node.
@@ -68,12 +67,13 @@ func (p *splunkGateway) GetClusterManagerBuckets(context context.Context) (*[]ma
 	url := clustermodel.GetClusterManagerBucketUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerBucketHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
 		p.log.Error(err, "get cluster manager buckets failed")
@@ -82,7 +82,9 @@ func (p *splunkGateway) GetClusterManagerBuckets(context context.Context) (*[]ma
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -90,7 +92,7 @@ func (p *splunkGateway) GetClusterManagerBuckets(context context.Context) (*[]ma
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Access current generation cluster manager information and create a cluster generation.
@@ -100,21 +102,24 @@ func (p *splunkGateway) GetClusterManagerGeneration(context context.Context) (*[
 	url := clustermodel.GetClusterManagerGenerationUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerGenerationHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager generation failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -122,7 +127,7 @@ func (p *splunkGateway) GetClusterManagerGeneration(context context.Context) (*[
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Used by the load balancers to check the high availability mode of a given cluster manager.
@@ -142,22 +147,26 @@ func (p *splunkGateway) GetClusterManagerHAActiveStatus(context context.Context)
 func (p *splunkGateway) GetClusterManagerHealth(context context.Context) (*[]managermodel.ClusterManagerHealthContent, error) {
 	url := clustermodel.GetClusterManagerHealthUrl
 
+	p.log.Info("getting cluster manager health information")
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerHealthHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager health failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -165,7 +174,7 @@ func (p *splunkGateway) GetClusterManagerHealth(context context.Context) (*[]man
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Access cluster index information.
@@ -174,21 +183,24 @@ func (p *splunkGateway) GetClusterManagerIndexes(context context.Context) (*[]ma
 	url := clustermodel.GetClusterManagerIndexesUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerIndexesHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager indexes failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
-		p.log.Info("response failure set to", "result", err)
+		p.log.Error(err, "call failed")
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -196,7 +208,7 @@ func (p *splunkGateway) GetClusterManagerIndexes(context context.Context) (*[]ma
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Access information about cluster manager node.
@@ -206,7 +218,7 @@ func (p *splunkGateway) GetClusterManagerInfo(context context.Context) (*[]manag
 	url := clustermodel.GetClusterManagerInfoUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerInfoHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
@@ -214,13 +226,15 @@ func (p *splunkGateway) GetClusterManagerInfo(context context.Context) (*[]manag
 		ForceContentType("application/json").
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager info failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -228,7 +242,7 @@ func (p *splunkGateway) GetClusterManagerInfo(context context.Context) (*[]manag
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Access cluster manager peers.
@@ -237,21 +251,24 @@ func (p *splunkGateway) GetClusterManagerPeers(context context.Context) (*[]mana
 	url := clustermodel.GetClusterManagerPeersUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerPeerHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager peers failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -259,7 +276,7 @@ func (p *splunkGateway) GetClusterManagerPeers(context context.Context) (*[]mana
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Display the details of all cluster managers participating in cluster manager redundancy, and switch the HA state of the cluster managers.
@@ -271,21 +288,24 @@ func (p *splunkGateway) GetClusterManagerRedundancy(context context.Context) (*[
 	url := clustermodel.GetClusterManagerRedundancyUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerRedundancyHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager redundancy failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -293,7 +313,7 @@ func (p *splunkGateway) GetClusterManagerRedundancy(context context.Context) (*[
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
 // Access cluster site information.
@@ -303,21 +323,24 @@ func (p *splunkGateway) GetClusterManagerSites(context context.Context) (*[]mana
 	url := clustermodel.GetClusterManagerSitesUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
+	splunkError := &splunkmodel.SplunkError{}
 	envelop := &managermodel.ClusterManagerSiteHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager sites failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
@@ -325,103 +348,40 @@ func (p *splunkGateway) GetClusterManagerSites(context context.Context) (*[]mana
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
+	return &contentList, err
 }
 
-// Endpoint to get the status of a rolling restart.
+// GetClusterManagerSearchHeadStatus Endpoint to get the status of a rolling restart.
 // GET the status of a rolling restart.
 // endpoint: https://<host>:<mPort>/services/cluster/manager/status
-func (p *splunkGateway) GetClusterManagerStatus(context context.Context) (*[]managermodel.ClusterManagerStatusContent, error) {
-	url := clustermodel.GetClusterManagerStatusUrl
+func (p *splunkGateway) GetClusterManagerSearchHeadStatus(context context.Context) (*[]managermodel.SearchHeadContent, error) {
+	url := clustermodel.GetClusterManagerSearchHeadUrl
 
 	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
-	envelop := &managermodel.ClusterManagerStatusHeader{}
+	splunkError := &splunkmodel.SplunkError{}
+	envelop := &managermodel.ClusterMasterSearchHeadHeader{}
 	resp, err := p.client.R().
 		SetResult(envelop).
 		SetError(&splunkError).
 		ForceContentType("application/json").
+		SetQueryParams(map[string]string{"output_mode": "json", "count": "0"}).
 		Get(url)
 	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
+		p.log.Error(err, "get cluster manager status failed")
 	}
 	if resp.StatusCode() != http.StatusOK {
 		p.log.Info("response failure set to", "result", err)
 	}
 	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		if len(splunkError.Messages) > 0 {
+			p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
+		}
 		return nil, splunkError
 	}
 
-	contentList := []managermodel.ClusterManagerStatusContent{}
+	contentList := []managermodel.SearchHeadContent{}
 	for _, entry := range envelop.Entry {
 		contentList = append(contentList, entry.Content)
 	}
-	return &contentList, nil
-}
-
-// Access cluster peers bucket configuration.
-// GET
-// List cluster peers bucket configuration.
-// endpoint: https://<host>:<mPort>/services/cluster/peer/buckets
-func (p *splunkGateway) GetClusterPeerBuckets(context context.Context) (*[]peermodel.ClusterPeerBucket, error) {
-	url := clustermodel.GetClusterPeerBucketsUrl
-
-	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
-	envelop := &commonmodel.Header{}
-	resp, err := p.client.R().
-		SetResult(envelop).
-		SetError(&splunkError).
-		ForceContentType("application/json").
-		Get(url)
-	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
-	}
-	if resp.StatusCode() != http.StatusOK {
-		p.log.Info("response failure set to", "result", err)
-	}
-	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
-		return nil, splunkError
-	}
-
-	contentList := []peermodel.ClusterPeerBucket{}
-	for _, entry := range envelop.Entry {
-		contentList = append(contentList, entry.Content.(peermodel.ClusterPeerBucket))
-	}
-	return &contentList, nil
-}
-
-// Manage peer buckets.
-// GET
-// List peer specified bucket information.
-// endpoint: https://<host>:<mPort>/services/cluster/peer/buckets/{name}
-func (p *splunkGateway) GetClusterPeerInfo(context context.Context) (*[]peermodel.ClusterPeerInfo, error) {
-	url := clustermodel.GetClusterPeerInfoUrl
-
-	// featch the configheader into struct
-	splunkError := &model.SplunkError{}
-	envelop := &commonmodel.Header{}
-	resp, err := p.client.R().
-		SetResult(envelop).
-		SetError(&splunkError).
-		ForceContentType("application/json").
-		Get(url)
-	if err != nil {
-		p.log.Error(err, "get cluster manager buckets failed")
-	}
-	if resp.StatusCode() != http.StatusOK {
-		p.log.Info("response failure set to", "result", err)
-	}
-	if resp.StatusCode() > 400 {
-		p.log.Info("response failure set to", "result", splunkError.Messages[0].Text)
-		return nil, splunkError
-	}
-
-	contentList := []peermodel.ClusterPeerInfo{}
-	for _, entry := range envelop.Entry {
-		contentList = append(contentList, entry.Content.(peermodel.ClusterPeerInfo))
-	}
-	return &contentList, nil
+	return &contentList, err
 }

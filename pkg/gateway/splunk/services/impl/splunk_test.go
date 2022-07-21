@@ -7,21 +7,20 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/jarcoal/httpmock"
-	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/indexer"
+	splunkmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
 	clustermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster"
-
 	//managermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/manager"
 	//peermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/peer"
 	"io/ioutil"
-	//logz "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	logz "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"testing"
 )
 
-//var log = logz.New().WithName("gateway").WithName("fixture")
+var slog = logz.New().WithName("gateway").WithName("fixture")
 
 func setCreds(t *testing.T) *splunkGateway {
 	//ctx := context.TODO()
-	sad := &gateway.SplunkCredentials{
+	sad := &splunkmodel.SplunkCredentials{
 		Address:                        "splunk-cm-cluster-master-service",
 		Port:                           8089,
 		ServicesNamespace:              "",
@@ -33,13 +32,15 @@ func setCreds(t *testing.T) *splunkGateway {
 		ClientPrivateKeyFile:           "",
 		DisableCertificateVerification: true,
 	}
-	publisher := func(reason, message string) {}
+	publisher := func(ctx context.Context, eventType, reason, message string) {}
 	// TODO fixme how to test the gateway call directly
 	//sm := NewGatewayFactory(ctx, &sad, publisher)
 	sm := &splunkGateway{
 		credentials: sad,
 		client:      resty.New(),
 		publisher:   publisher,
+		log: slog,
+		debugLog: slog,
 	}
 	//splunkURL := fmt.Sprintf("https://%s:%d/%s", sad.Address, sad.Port, sad.ServicesNamespace)
 	splunkURL := fmt.Sprintf("https://%s:%d", sad.Address, sad.Port)
@@ -226,6 +227,53 @@ func TestGetClusterManagerSites(t *testing.T) {
 	_, err = sm.GetClusterManagerSites(ctx)
 	if err != nil {
 		t.Errorf("fixture: error in get cluster manager sites %v", err)
+	}
+}
+
+func TestGetClusterManagerSearchHeadStatus(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	ctx := context.TODO()
+	sm := setCreds(t)
+	httpmock.ActivateNonDefault(sm.client.GetClient())
+	content, err := ioutil.ReadFile("../fixture/cluster_manager_searchhead.json")
+	if err != nil {
+		t.Errorf("fixture: error in get cluster manager searchheads %v", err)
+	}
+	fixtureData := string(content)
+	responder := httpmock.NewStringResponder(200, fixtureData)
+	url := clustermodel.GetClusterManagerSearchHeadUrl
+	httpmock.RegisterResponder("GET", url, responder)
+
+	_, err = sm.GetClusterManagerSearchHeadStatus(ctx)
+	if err != nil {
+		t.Errorf("fixture: error in get cluster manager searchheads %v", err)
+	}
+}
+
+func TestGetClusterManagerPeers(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	ctx := context.TODO()
+	sm := setCreds(t)
+	httpmock.ActivateNonDefault(sm.client.GetClient())
+	content, err := ioutil.ReadFile("../fixture/cluster_manager_peers.json")
+	if err != nil {
+		t.Errorf("fixture: error in get cluster manager peers %v", err)
+	}
+	fixtureData := string(content)
+	responder := httpmock.NewStringResponder(200, fixtureData)
+	url := clustermodel.GetClusterManagerPeersUrl
+	httpmock.RegisterResponder("GET", url, responder)
+
+	peersptr, err := sm.GetClusterManagerPeers(ctx)
+	if err != nil {
+		t.Errorf("fixture: error in get cluster manager searchheads %v", err)
+	}
+	if peersptr == nil {
+		t.Errorf("fixture: error in get cluster manager searchheads  peers list is empty")
 	}
 }
 

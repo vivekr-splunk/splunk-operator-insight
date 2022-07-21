@@ -1943,6 +1943,7 @@ func updateCRStatus(ctx context.Context, client splcommon.ControllerClient, orig
 	scopedLog := reqLogger.WithName("updateCRStatus").WithValues("original cr version", origCR.GetResourceVersion())
 
 	var tryCnt int
+	var err error
 	for tryCnt = 0; tryCnt < maxRetryCountForCRStatusUpdate; tryCnt++ {
 		latestCR, err := fetchCurrentCRWithStatusUpdate(ctx, client, origCR)
 		if err != nil {
@@ -1981,13 +1982,15 @@ func updateCRStatus(ctx context.Context, client splcommon.ControllerClient, orig
 
 			// Status update successful
 			break
+		} else {
+			scopedLog.Error(err, "testing Status update failed", "Attempt count", tryCnt)
 		}
 
 		time.Sleep(time.Duration(tryCnt) * 10 * time.Millisecond)
 	}
 
 	if origCR.GetDeletionTimestamp() == nil && tryCnt >= maxRetryCountForCRStatusUpdate {
-		scopedLog.Error(nil, "Status update failed", "Attempt count", tryCnt)
+		scopedLog.Error(err, "Status update failed", "Attempt count", tryCnt)
 	}
 }
 
