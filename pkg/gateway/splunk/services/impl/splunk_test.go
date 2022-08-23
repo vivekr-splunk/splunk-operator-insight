@@ -39,8 +39,8 @@ func setCreds(t *testing.T) *splunkGateway {
 		credentials: sad,
 		client:      resty.New(),
 		publisher:   publisher,
-		log: slog,
-		debugLog: slog,
+		log:         slog,
+		debugLog:    slog,
 	}
 	//splunkURL := fmt.Sprintf("https://%s:%d/%s", sad.Address, sad.Port, sad.ServicesNamespace)
 	splunkURL := fmt.Sprintf("https://%s:%d", sad.Address, sad.Port)

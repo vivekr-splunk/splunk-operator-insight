@@ -26,4 +26,6 @@ const (
 	GetClusterPeerInfoUrl = "/services/cluster/peer/info"
 
 	GetLicenseManagerLocalPeers = "/services/licenser/localslave"
+
+	GetSearchHeadCaptainInfoUrl = "/services/shcluster/captain/info"
 )

@@ -94,4 +94,49 @@ type Gateway interface {
 	// GetLicenseManagerPeers Access cluster node configuration details.
 	// endpoint: "https://localhost:8089/services/licenser/localpeer?output_mode=json"
 	GetLicenseManagerPeers(context context.Context) (*[]lmmodel.LicenseLocalPeerEntry, error)
+
+
+	GetSearchHeadCaptainInfo(ctx context.Context) (error)
+
+	GetSearchHeadCaptainMembers(ctx context.Context) (error)
+
+	GetSearchHeadClusterMemberInfo(ctx context.Context) (error)
+
+	SetSearchHeadDetention(ctx context.Context) (error)
+
+	RemoveSearchHeadClusterMember(ctx context.Context) (error)
+
+	GetIndexerClusterPeerInfo()
+
+	RemoveIndexerClusterPeer()
+
+	DecommissionIndexerClusterPeer()
+
+	BundlePush()
+
+	AutomateMCApplyChanges()
+
+	GetMonitoringconsoleServerRoles()
+
+	UpdateDMCGroups()
+
+	UpdateDMCClusteringLabelGroup()
+
+	GetMonitoringconsoleAssetTable()
+
+	PostMonitoringConsoleAssetTable()
+
+	GetMonitoringConsoleUISettings()
+
+	UpdateLookupUISettings()
+
+	UpdateMonitoringConsoleApp()
+
+	GetClusterInfo()
+
+	SetIdxcSecret()
+
+	RestartSplunk()
+
+
 }

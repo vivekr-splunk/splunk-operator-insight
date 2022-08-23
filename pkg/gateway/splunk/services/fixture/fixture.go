@@ -623,3 +623,46 @@ func (p *fixtureGateway) GetLicenseManagerPeers(context context.Context) (*[]lmm
 
 	return &envelop.Entry, err
 }
+
+
+func (p *fixtureGateway) GetSearchHeadCaptainInfo(ctx context.Context) (error) { return nil }
+
+func (p *fixtureGateway) GetSearchHeadCaptainMembers(ctx context.Context) (error)
+
+func (p *fixtureGateway) GetSearchHeadClusterMemberInfo(ctx context.Context) (error)
+
+func (p *fixtureGateway) SetSearchHeadDetention(ctx context.Context) (error)
+
+func (p *fixtureGateway) RemoveSearchHeadClusterMember(ctx context.Context) (error)
+
+func (p *fixtureGateway) GetIndexerClusterPeerInfo() { }
+
+func (p *fixtureGateway) RemoveIndexerClusterPeer() { }
+
+func (p *fixtureGateway) DecommissionIndexerClusterPeer() { }
+
+func (p *fixtureGateway) BundlePush() { }
+
+func (p *fixtureGateway) AutomateMCApplyChanges() { }
+
+func (p *fixtureGateway) GetMonitoringconsoleServerRoles() { }
+
+func (p *fixtureGateway) UpdateDMCGroups() { }
+
+func (p *fixtureGateway) UpdateDMCClusteringLabelGroup() { }
+
+func (p *fixtureGateway) GetMonitoringconsoleAssetTable() { }
+
+func (p *fixtureGateway) PostMonitoringConsoleAssetTable() { }
+
+func (p *fixtureGateway) GetMonitoringConsoleUISettings() { }
+
+func (p *fixtureGateway) UpdateLookupUISettings() { }
+
+func (p *fixtureGateway) UpdateMonitoringConsoleApp() { }
+
+func (p *fixtureGateway) GetClusterInfo() { }
+
+func (p *fixtureGateway) SetIdxcSecret() { }
+
+func (p *fixtureGateway) RestartSplunk() { }
