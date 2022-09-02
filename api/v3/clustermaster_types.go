@@ -65,6 +65,9 @@ type ClusterMasterStatus struct {
 	// App Framework status
 	AppContext AppDeploymentContext `json:"appContext"`
 
+	// Telemetry App installation flag
+	TelAppInstalled bool `json:"telAppInstalled"`
+
 	// Conditions represent the latest available observations of an object's state
 	Conditions []metav1.Condition `json:"conditions"`
 }

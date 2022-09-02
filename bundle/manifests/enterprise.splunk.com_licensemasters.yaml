@@ -3557,72 +3557,15 @@ spec:
                 - Terminating
                 - Error
                 type: string
+              telAppInstalled:
+                description: Telemetry App installation flag
+                type: boolean
             type: object
         type: object
     served: true
     storage: true
     subresources:
       status: {}
-  - name: v1
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-        type: object
-        x-kubernetes-preserve-unknown-fields: true
-    served: true
-    storage: false
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-        type: object
-        x-kubernetes-preserve-unknown-fields: true
-    served: true
-    storage: false
-  - name: v1beta1
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-        type: object
-        x-kubernetes-preserve-unknown-fields: true
-    served: true
-    storage: false
-  - name: v1beta2
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-        type: object
-        x-kubernetes-preserve-unknown-fields: true
-    served: true
-    storage: false
-  - name: v1beta3
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-        type: object
-        x-kubernetes-preserve-unknown-fields: true
-    served: true
-    storage: false
-  - name: v2
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-        type: object
-        x-kubernetes-preserve-unknown-fields: true
-    served: true
-    storage: false
 status:
   acceptedNames:
     kind: ""
