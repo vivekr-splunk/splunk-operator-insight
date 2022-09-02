@@ -1,6 +1,8 @@
 package manager
 
-import "time"
+import (
+	"time"
+)
 
 // Description: Performs health checks to determine the cluster health and search impact, prior to a rolling upgrade of the indexer cluster.
 // Rest End Point API: services/cluster/manager/health

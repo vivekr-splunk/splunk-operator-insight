@@ -6,6 +6,7 @@ import (
 	clustermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster"
 	managermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/manager"
 	peermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/peer"
+	searchheadmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/searchhead"
 	lmmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/license-manager"
 )
 
@@ -95,16 +96,15 @@ type Gateway interface {
 	// endpoint: "https://localhost:8089/services/licenser/localpeer?output_mode=json"
 	GetLicenseManagerPeers(context context.Context) (*[]lmmodel.LicenseLocalPeerEntry, error)
 
+	GetSearchHeadCaptainInfo(ctx context.Context) (*searchheadmodel.SearchHeadCaptainInfo, error)
 
-	GetSearchHeadCaptainInfo(ctx context.Context) (error)
+	GetSearchHeadCaptainMembers(ctx context.Context) error
 
-	GetSearchHeadCaptainMembers(ctx context.Context) (error)
+	GetSearchHeadClusterMemberInfo(ctx context.Context) error
 
-	GetSearchHeadClusterMemberInfo(ctx context.Context) (error)
+	SetSearchHeadDetention(ctx context.Context) error
 
-	SetSearchHeadDetention(ctx context.Context) (error)
-
-	RemoveSearchHeadClusterMember(ctx context.Context) (error)
+	RemoveSearchHeadClusterMember(ctx context.Context) error
 
 	GetIndexerClusterPeerInfo()
 
@@ -137,6 +137,4 @@ type Gateway interface {
 	SetIdxcSecret()
 
 	RestartSplunk()
-
-
 }

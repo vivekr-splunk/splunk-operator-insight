@@ -85,11 +85,8 @@ func (p *splunkGateway) GetClusterPeerInfo(context context.Context) (*[]peermode
 	return &contentList, err
 }
 
+func (p *splunkGateway) GetSearchHeadCaptainInfo(ctx context.Context) (*searchheadmodel.SearchHeadCaptainInfo, error) {
 
-
-func (p *splunkGateway) GetSearchHeadCaptainInfo(ctx context.Context) (*searchheadmodel.SearchHeadCaptainInfo, error) { 
-
-	
 	apiResponse := struct {
 		Entry []struct {
 			Content searchheadmodel.SearchHeadCaptainInfo `json:"content"`
@@ -118,50 +115,50 @@ func (p *splunkGateway) GetSearchHeadCaptainInfo(ctx context.Context) (*searchhe
 	return &apiResponse.Entry[0].Content, nil
 }
 
-func (p *splunkGateway) GetSearchHeadCaptainMembers(ctx context.Context) (error) {
-return nil
-}
-
-func (p *splunkGateway) GetSearchHeadClusterMemberInfo(ctx context.Context) (error) {
-return nil
-}
-
-func (p *splunkGateway) SetSearchHeadDetention(ctx context.Context) (error) {
-return nil
-}
-
-func (p *splunkGateway) RemoveSearchHeadClusterMember(ctx context.Context) (error) {
+func (p *splunkGateway) GetSearchHeadCaptainMembers(ctx context.Context) error {
 	return nil
 }
 
-func (p *splunkGateway) GetIndexerClusterPeerInfo() { }
+func (p *splunkGateway) GetSearchHeadClusterMemberInfo(ctx context.Context) error {
+	return nil
+}
 
-func (p *splunkGateway) RemoveIndexerClusterPeer() { }
+func (p *splunkGateway) SetSearchHeadDetention(ctx context.Context) error {
+	return nil
+}
 
-func (p *splunkGateway) DecommissionIndexerClusterPeer() { }
+func (p *splunkGateway) RemoveSearchHeadClusterMember(ctx context.Context) error {
+	return nil
+}
 
-func (p *splunkGateway) BundlePush() { }
+func (p *splunkGateway) GetIndexerClusterPeerInfo() {}
 
-func (p *splunkGateway) AutomateMCApplyChanges() { }
+func (p *splunkGateway) RemoveIndexerClusterPeer() {}
 
-func (p *splunkGateway) GetMonitoringconsoleServerRoles() { }
+func (p *splunkGateway) DecommissionIndexerClusterPeer() {}
 
-func (p *splunkGateway) UpdateDMCGroups() { }
+func (p *splunkGateway) BundlePush() {}
 
-func (p *splunkGateway) UpdateDMCClusteringLabelGroup() { }
+func (p *splunkGateway) AutomateMCApplyChanges() {}
 
-func (p *splunkGateway) GetMonitoringconsoleAssetTable() { }
+func (p *splunkGateway) GetMonitoringconsoleServerRoles() {}
 
-func (p *splunkGateway) PostMonitoringConsoleAssetTable() { }
+func (p *splunkGateway) UpdateDMCGroups() {}
 
-func (p *splunkGateway) GetMonitoringConsoleUISettings() { }
+func (p *splunkGateway) UpdateDMCClusteringLabelGroup() {}
 
-func (p *splunkGateway) UpdateLookupUISettings() { }
+func (p *splunkGateway) GetMonitoringconsoleAssetTable() {}
 
-func (p *splunkGateway) UpdateMonitoringConsoleApp() { }
+func (p *splunkGateway) PostMonitoringConsoleAssetTable() {}
 
-func (p *splunkGateway) GetClusterInfo() { }
+func (p *splunkGateway) GetMonitoringConsoleUISettings() {}
 
-func (p *splunkGateway) SetIdxcSecret() { }
+func (p *splunkGateway) UpdateLookupUISettings() {}
 
-func (p *splunkGateway) RestartSplunk() { }
+func (p *splunkGateway) UpdateMonitoringConsoleApp() {}
+
+func (p *splunkGateway) GetClusterInfo() {}
+
+func (p *splunkGateway) SetIdxcSecret() {}
+
+func (p *splunkGateway) RestartSplunk() {}

@@ -13,6 +13,7 @@ import (
 	clustermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster"
 	managermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/manager"
 	peermodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/peer"
+	searchheadmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/cluster/searchhead"
 	commonmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/common"
 	lmmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model/services/license-manager"
 	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/services"
@@ -624,45 +625,54 @@ func (p *fixtureGateway) GetLicenseManagerPeers(context context.Context) (*[]lmm
 	return &envelop.Entry, err
 }
 
+func (p *fixtureGateway) GetSearchHeadCaptainInfo(ctx context.Context) (*searchheadmodel.SearchHeadCaptainInfo, error) {
+	return nil, nil
+}
 
-func (p *fixtureGateway) GetSearchHeadCaptainInfo(ctx context.Context) (error) { return nil }
+func (p *fixtureGateway) GetSearchHeadCaptainMembers(ctx context.Context) error {
+	return nil
+}
 
-func (p *fixtureGateway) GetSearchHeadCaptainMembers(ctx context.Context) (error)
+func (p *fixtureGateway) GetSearchHeadClusterMemberInfo(ctx context.Context) error {
+	return nil
+}
 
-func (p *fixtureGateway) GetSearchHeadClusterMemberInfo(ctx context.Context) (error)
+func (p *fixtureGateway) SetSearchHeadDetention(ctx context.Context) error {
+	return nil
+}
 
-func (p *fixtureGateway) SetSearchHeadDetention(ctx context.Context) (error)
+func (p *fixtureGateway) RemoveSearchHeadClusterMember(ctx context.Context) error {
+	return nil
+}
 
-func (p *fixtureGateway) RemoveSearchHeadClusterMember(ctx context.Context) (error)
+func (p *fixtureGateway) GetIndexerClusterPeerInfo() {}
 
-func (p *fixtureGateway) GetIndexerClusterPeerInfo() { }
+func (p *fixtureGateway) RemoveIndexerClusterPeer() {}
 
-func (p *fixtureGateway) RemoveIndexerClusterPeer() { }
+func (p *fixtureGateway) DecommissionIndexerClusterPeer() {}
 
-func (p *fixtureGateway) DecommissionIndexerClusterPeer() { }
+func (p *fixtureGateway) BundlePush() {}
 
-func (p *fixtureGateway) BundlePush() { }
+func (p *fixtureGateway) AutomateMCApplyChanges() {}
 
-func (p *fixtureGateway) AutomateMCApplyChanges() { }
+func (p *fixtureGateway) GetMonitoringconsoleServerRoles() {}
 
-func (p *fixtureGateway) GetMonitoringconsoleServerRoles() { }
+func (p *fixtureGateway) UpdateDMCGroups() {}
 
-func (p *fixtureGateway) UpdateDMCGroups() { }
+func (p *fixtureGateway) UpdateDMCClusteringLabelGroup() {}
 
-func (p *fixtureGateway) UpdateDMCClusteringLabelGroup() { }
+func (p *fixtureGateway) GetMonitoringconsoleAssetTable() {}
 
-func (p *fixtureGateway) GetMonitoringconsoleAssetTable() { }
+func (p *fixtureGateway) PostMonitoringConsoleAssetTable() {}
 
-func (p *fixtureGateway) PostMonitoringConsoleAssetTable() { }
+func (p *fixtureGateway) GetMonitoringConsoleUISettings() {}
 
-func (p *fixtureGateway) GetMonitoringConsoleUISettings() { }
+func (p *fixtureGateway) UpdateLookupUISettings() {}
 
-func (p *fixtureGateway) UpdateLookupUISettings() { }
+func (p *fixtureGateway) UpdateMonitoringConsoleApp() {}
 
-func (p *fixtureGateway) UpdateMonitoringConsoleApp() { }
+func (p *fixtureGateway) GetClusterInfo() {}
 
-func (p *fixtureGateway) GetClusterInfo() { }
+func (p *fixtureGateway) SetIdxcSecret() {}
 
-func (p *fixtureGateway) SetIdxcSecret() { }
-
-func (p *fixtureGateway) RestartSplunk() { }
+func (p *fixtureGateway) RestartSplunk() {}

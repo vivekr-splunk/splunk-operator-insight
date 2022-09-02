@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-resty/resty/v2"
 	splunkmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
+
 	//model "github.com/splunk/splunk-operator/pkg/gateway/splunk/model"
 	gateway "github.com/splunk/splunk-operator/pkg/gateway/splunk/services"
 	//cmmodel "github.com/splunk/splunk-operator/pkg/gateway/splunk/cluster-manager/model"
